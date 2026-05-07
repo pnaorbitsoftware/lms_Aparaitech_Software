@@ -26,7 +26,6 @@ import AllProjectsModal from "./components/student/AllProjectsModal";
 import { AllProjectsContext } from "./components/student/Navbar";
 import InquiryModal from "./components/common/InquiryModal";
 import LoginModal from "./components/student/LoginModal";
-import { useContext } from "react";
 
 const App = () => {
   const { isEducator, showLogin } = useContext(AppContext);
@@ -42,24 +41,24 @@ const App = () => {
 const AppContent = ({ isEducatorRoute, isEducator }) => {
   const { isAllProjectsOpen, setIsAllProjectsOpen } = useContext(AllProjectsContext);
 
-  return (
-    <div className="text-default min-h-screen bg-white relative">
-      <ToastContainer />
-      {showLogin && <LoginModal /> }
+ return (
+  <div className="text-default min-h-screen bg-white relative">
+    <ToastContainer />
 
-      {/* ✅ Student Navbar (Hidden on educator routes) */}
-      {!isEducatorRoute && <Navbar />}
+    {showLogin && <LoginModal />}
 
-      {/* ✅ All Projects Modal - Available on all pages */}
-      {!isEducatorRoute && (
-        <AllProjectsModal
-          isOpen={isAllProjectsOpen}
-          onClose={() => setIsAllProjectsOpen(false)}
-        />
-      )}
+    {/* ✅ Student Navbar (Hidden on educator routes) */}
+    {!isEducatorRoute && <Navbar />}
 
-      {/* ✅ Inquiry Modal - Appears after 15 seconds */}
-      {!isEducatorRoute && <InquiryModal />}
+    {/* ✅ All Projects Modal */}
+    {!isEducatorRoute && (
+      <AllProjectsModal
+        isOpen={isAllProjectsOpen}
+        onClose={() => setIsAllProjectsOpen(false)}
+      />
+    )}
+
+    {!isEducatorRoute && <InquiryModal />}
 
         <Routes>
           {/* 🧩 Student Routes */}
