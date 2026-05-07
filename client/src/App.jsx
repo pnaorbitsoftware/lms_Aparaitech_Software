@@ -23,6 +23,7 @@ import About from "./pages/student/About";
 import Contact from "./pages/student/Contact";
 import AllProjectsModal from "./components/student/AllProjectsModal";
 import InquiryModal from "./components/common/InquiryModal";
+import AllProjectsPage from "./pages/student/AllProjectsPage";
 import LoginModal from "./components/student/LoginModal";
 
 const App = () => {
@@ -58,6 +59,7 @@ const AppContent = ({ isEducatorRoute }) => {
         <Route path="/loading/:path" element={<Loading />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
+        <Route path="/all-projects" element={<AllProjectsPage />} />
         <Route path="/educator/*" element={isEducator ? <Educator /> : <Navigate to="/" replace />}>
           <Route index element={<Dashboard />} />
           <Route path="add-course" element={<AddCourse />} />
