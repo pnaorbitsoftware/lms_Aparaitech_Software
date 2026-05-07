@@ -45,7 +45,7 @@ const AppContent = ({ isEducatorRoute, isEducator }) => {
   return (
     <div className="text-default min-h-screen bg-white relative">
       <ToastContainer />
-      {showLogin && <LoginModal />
+      {showLogin && <LoginModal /> }
 
       {/* ✅ Student Navbar (Hidden on educator routes) */}
       {!isEducatorRoute && <Navbar />}
