@@ -10,7 +10,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@clerk/clerk-react": "^5.17.1",
     "@emailjs/browser": "^4.4.1",
     "axios": "^1.7.8",
     "caniuse-lite": "^1.0.30001747",

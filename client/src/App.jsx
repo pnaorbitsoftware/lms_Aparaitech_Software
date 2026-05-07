@@ -25,9 +25,11 @@ import Contact from "./pages/student/Contact";
 import AllProjectsModal from "./components/student/AllProjectsModal";
 import { AllProjectsContext } from "./components/student/Navbar";
 import InquiryModal from "./components/common/InquiryModal";
+import LoginModal from "./components/student/LoginModal";
+import { useContext } from "react";
 
 const App = () => {
-  const { isEducator } = useContext(AppContext);
+  const { isEducator, showLogin } = useContext(AppContext);
   const isEducatorRoute = useMatch("/educator/*");
 
   return (
@@ -43,6 +45,7 @@ const AppContent = ({ isEducatorRoute, isEducator }) => {
   return (
     <div className="text-default min-h-screen bg-white relative">
       <ToastContainer />
+      {showLogin && <LoginModal />
 
       {/* ✅ Student Navbar (Hidden on educator routes) */}
       {!isEducatorRoute && <Navbar />}

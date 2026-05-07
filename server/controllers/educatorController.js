@@ -3,7 +3,7 @@ import { Readable } from "stream";
 import Course from "../models/Course.js";
 import { Purchase } from "../models/Purchase.js";
 import User from "../models/User.js";
-import { clerkClient } from "@clerk/express";
+
 
 // -----------------------------
 // Update Role to Educator
@@ -11,23 +11,14 @@ import { clerkClient } from "@clerk/express";
 export const updateRoleToEducator = async (req, res) => {
   try {
     const userId = req.auth?.userId;
-
-    if (!userId)
-      return res
-        .status(401)
-        .json({ success: false, message: "Unauthorized: No user ID found" });
-
-    await clerkClient.users.updateUserMetadata(userId, {
-      publicMetadata: { role: "educator" },
-    });
-
+    if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
+    await User.findByIdAndUpdate(userId, { role: "educator" });
     res.json({ success: true, message: "You can publish a course now" });
   } catch (error) {
-    res
-      .status(500)
-      .json({ success: false, message: error.message || "Server error" });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
+
 
 // -----------------------------
 // Add New Course

@@ -1,90 +1,43 @@
-import { clerkClient } from "@clerk/express";
+import jwt from "jsonwebtoken";
+import User from "../models/User.js";
 
-// ✅ Middleware: Protect General Authenticated Routes
 export const protect = async (req, res, next) => {
   try {
-    const userId = req.auth?.userId;
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) return res.status(401).json({ success: false, message: "Not authorized" });
 
-    if (!userId) {
-      return res
-        .status(401)
-        .json({ success: false, message: "Not authorized, no user found" });
-    }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id);
+    if (!user) return res.status(401).json({ success: false, message: "User not found" });
 
-    // Optionally verify the user exists in Clerk
-    const user = await clerkClient.users.getUser(userId);
-    if (!user) {
-      return res
-        .status(401)
-        .json({ success: false, message: "User not found" });
-    }
-
-    // Attach user data to request
-    req.user = {
-      id: user.id,
-      email: user.emailAddresses[0]?.emailAddress || "",
-      role: user.publicMetadata?.role || "student",
-    };
-
+    req.user = { id: user._id, email: user.email, role: user.role };
+    req.auth = { userId: user._id };
     next();
   } catch (error) {
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Auth middleware error",
-        error: error.message,
-      });
+    res.status(401).json({ success: false, message: "Invalid token" });
   }
 };
 
-// ✅ Middleware: Protect Educator Routes
 export const protectEducator = async (req, res, next) => {
   try {
-    const userId = req.auth?.userId;
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) return res.status(401).json({ success: false, message: "Not authorized" });
 
-    if (!userId) {
-      return res
-        .status(401)
-        .json({ success: false, message: "Not authorized, no user found" });
-    }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id);
+    if (!user || (user.role !== "educator" && user.role !== "admin"))
+      return res.status(403).json({ success: false, message: "Educators only" });
 
-    const response = await clerkClient.users.getUser(userId);
-
-    if (response.publicMetadata.role !== "educator") {
-      return res
-        .status(403)
-        .json({
-          success: false,
-          message: "Unauthorized Access: Educators only",
-        });
-    }
-
-    // Attach educator user info to request
-    req.user = {
-      id: response.id,
-      email: response.emailAddresses[0]?.emailAddress || "",
-      role: response.publicMetadata.role,
-    };
-
+    req.user = { id: user._id, email: user.email, role: user.role };
+    req.auth = { userId: user._id };
     next();
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(401).json({ success: false, message: "Invalid token" });
   }
 };
 
-// ✅ Middleware: Alias for Educator Role Check (for courseRoute.js compatibility)
 export const isEducator = (req, res, next) => {
-  try {
-    if (!req.user || req.user.role !== "educator") {
-      return res
-        .status(403)
-        .json({ success: false, message: "Access denied: Educators only" });
-    }
-    next();
-  } catch (error) {
-    res
-      .status(500)
-      .json({ success: false, message: "Server error", error: error.message });
-  }
+  if (!req.user || (req.user.role !== "educator" && req.user.role !== "admin"))
+    return res.status(403).json({ success: false, message: "Educators only" });
+  next();
 };

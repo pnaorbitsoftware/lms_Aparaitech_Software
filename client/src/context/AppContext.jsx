@@ -1,251 +1,154 @@
-// 📁 src/context/AppContext.jsx
 import axios from "axios";
-import { createContext, useEffect, useRef, useState } from "react";
+import { createContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { useAuth, useUser } from "@clerk/clerk-react";
 import humanizeDuration from "humanize-duration";
 
 export const AppContext = createContext();
-
-// ✅ Global axios defaults
 axios.defaults.withCredentials = true;
 
 export const AppContextProvider = (props) => {
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
-  const rawCurrency = (import.meta.env.VITE_CURRENCY || "₹").toString();
-  const normalizedCurrency = rawCurrency.trim().toLowerCase();
-  const currency = ["$", "usd", "rs", "rs.", "inr", "rupees"].includes(
-    normalizedCurrency
-  )
-    ? "₹"
-    : rawCurrency;
+  const currency = "₹";
   const navigate = useNavigate();
-  const { getToken } = useAuth();
-  const { user, isLoaded } = useUser();
 
   const [showLogin, setShowLogin] = useState(false);
   const [isEducator, setIsEducator] = useState(false);
   const [allCourses, setAllCourses] = useState([]);
   const [userData, setUserData] = useState(null);
   const [enrolledCourses, setEnrolledCourses] = useState([]);
-  const roleRedirectedRef = useRef(false);
+  const [token, setToken] = useState(localStorage.getItem("token") || "");
 
-  // ✅ Fetch all courses (handles errors gracefully)
+  const getToken = () => token;
+
+  const authHeader = () => ({ Authorization: `Bearer ${token}` });
+
   const fetchAllCourses = async () => {
     try {
-      const response = await axios.get(`${backendUrl}/api/course/all`, {
-        timeout: 8000,
-      });
-
-      if (response?.data?.success) {
-        const courses = response.data.courses || [];
-        setAllCourses(courses);
-      } else {
-        toast.error(response?.data?.message || "Failed to load courses.");
-        setAllCourses([]);
-      }
-    } catch (error) {
-      if (error.code === "ERR_NETWORK") {
-        toast.error(
-          "Cannot connect to backend. Check your internet or backend deployment."
-        );
-      } else if (error.response?.status === 500) {
-        toast.error("Server error while fetching courses.");
-      } else if (error.message?.includes("CORS")) {
-        toast.error("CORS issue: backend not allowing this origin.");
-      } else {
-        toast.error(error.message || "Unknown error fetching courses.");
-      }
-
-      setAllCourses([]); // Safe fallback
+      const { data } = await axios.get(`${backendUrl}/api/course/all`, { timeout: 8000 });
+      if (data?.success) setAllCourses(data.courses || []);
+      else { toast.error(data?.message || "Failed to load courses."); setAllCourses([]); }
+    } catch (e) {
+      toast.error(e.message || "Error fetching courses.");
+      setAllCourses([]);
     }
   };
 
-  // ✅ Fetch user data (robust to CORS/network errors)
   const fetchUserData = async () => {
+    if (!token) { setUserData(null); return; }
     try {
-      if (!user) {
-        setUserData(null);
-        return;
-      }
-
-      const token = await getToken();
-      if (!token) {
-        return;
-      }
-
-      const response = await axios.get(`${backendUrl}/api/user/data`, {
-        headers: { Authorization: `Bearer ${token}` },
-        timeout: 8000,
-      });
-
-      if (response?.data?.success) {
-        setUserData(response.data.user);
-
-        const role = user?.publicMetadata?.role || "student";
-        setIsEducator(role === "educator" || role === "admin");
-      } else {
-        toast.error(response?.data?.message || "Failed to load user data.");
-      }
-    } catch (error) {
-      if (error.code === "ERR_NETWORK") {
-        toast.error("Cannot reach backend. Check your network or CORS setup.");
-      } else if (error.response?.status === 401) {
-        toast.error("Unauthorized. Please log in again.");
-      } else if (error.message?.includes("CORS")) {
-        toast.error(
-          "CORS error — backend not configured to allow this origin."
-        );
-      } else {
-        toast.error(error.message || "Unknown error fetching user data.");
-      }
-
-      setUserData(null);
+      const { data } = await axios.get(`${backendUrl}/api/user/data`, { headers: authHeader(), timeout: 8000 });
+      if (data?.success) {
+        setUserData(data.user);
+        setIsEducator(data.user.role === "educator" || data.user.role === "admin");
+      } else toast.error(data?.message || "Failed to load user data.");
+    } catch (e) {
+      if (e.response?.status === 401) { logout(); }
+      else toast.error(e.message || "Error fetching user data.");
     }
   };
 
-  // ✅ Fetch enrolled courses
   const fetchUserEnrolledCourses = async () => {
+    if (!token) { setEnrolledCourses([]); return; }
     try {
-      if (!user) {
-        setEnrolledCourses([]);
-        return;
-      }
-
-      const token = await getToken();
-      if (!token) {
-        setEnrolledCourses([]);
-        return;
-      }
-
-      const response = await axios.get(
-        `${backendUrl}/api/user/enrolled-courses`,
-        { headers: { Authorization: `Bearer ${token}` }, timeout: 8000 }
-      );
-
-      if (response?.data?.success) {
-        setEnrolledCourses(response.data.enrolledCourses.reverse());
-      } else {
-        toast.error(
-          response?.data?.message || "Failed to load enrolled courses."
-        );
-      }
-    } catch (error) {
-      if (error.code === "ERR_NETWORK") {
-        toast.error("Network error while fetching enrolled courses.");
-      } else if (error.response?.status === 500) {
-        toast.error("Server error while loading enrolled courses.");
-      } else if (error.message?.includes("CORS")) {
-        toast.error("CORS issue while loading enrolled courses.");
-      } else {
-        toast.error(error.message || "Unknown error loading courses.");
-      }
-
+      const { data } = await axios.get(`${backendUrl}/api/user/enrolled-courses`, { headers: authHeader(), timeout: 8000 });
+      if (data?.success) setEnrolledCourses(data.enrolledCourses.reverse());
+      else toast.error(data?.message || "Failed to load enrolled courses.");
+    } catch (e) {
       setEnrolledCourses([]);
     }
   };
 
-  // ✅ Fetch single course (includes PDFs)
   const fetchCourseById = async (courseId) => {
     try {
-      const response = await axios.get(`${backendUrl}/api/course/${courseId}`, {
-        timeout: 8000,
-      });
-      if (response?.data?.success) return response.data.courseData;
-      else {
-        toast.error(response?.data?.message || "Failed to load course.");
-        return null;
-      }
-    } catch (error) {
-      toast.error(error.message || "Error fetching course.");
+      const { data } = await axios.get(`${backendUrl}/api/course/${courseId}`, { timeout: 8000 });
+      if (data?.success) return data.courseData;
+      toast.error(data?.message || "Failed to load course.");
+      return null;
+    } catch (e) {
+      toast.error(e.message || "Error fetching course.");
       return null;
     }
   };
 
-  // 🧮 Utility functions
+  const login = async (email, password) => {
+    try {
+      const { data } = await axios.post(`${backendUrl}/api/auth/login`, { email, password });
+      if (data?.success) {
+        setToken(data.token);
+        localStorage.setItem("token", data.token);
+        setUserData(data.user);
+        setIsEducator(data.user.role === "educator" || data.user.role === "admin");
+        setShowLogin(false);
+        if (data.user.role === "educator" || data.user.role === "admin") navigate("/educator");
+        else navigate("/");
+        return { success: true };
+      }
+      return { success: false, message: data?.message };
+    } catch (e) {
+      return { success: false, message: e.message };
+    }
+  };
+
+  const register = async (name, email, password) => {
+    try {
+      const { data } = await axios.post(`${backendUrl}/api/auth/register`, { name, email, password });
+      if (data?.success) {
+        setToken(data.token);
+        localStorage.setItem("token", data.token);
+        setUserData(data.user);
+        setIsEducator(false);
+        setShowLogin(false);
+        navigate("/");
+        return { success: true };
+      }
+      return { success: false, message: data?.message };
+    } catch (e) {
+      return { success: false, message: e.message };
+    }
+  };
+
+  const logout = () => {
+    setToken("");
+    localStorage.removeItem("token");
+    setUserData(null);
+    setIsEducator(false);
+    setEnrolledCourses([]);
+    navigate("/");
+  };
+
   const calculateChapterTime = (chapter) => {
     let time = 0;
-    chapter.chapterContent.forEach(
-      (lecture) => (time += lecture.lectureDuration)
-    );
+    chapter.chapterContent.forEach((l) => (time += l.lectureDuration));
     return humanizeDuration(time * 60 * 1000, { units: ["h", "m"] });
   };
 
   const calculateCourseDuration = (course) => {
     let time = 0;
-    course.courseContent.forEach((chapter) =>
-      chapter.chapterContent.forEach(
-        (lecture) => (time += lecture.lectureDuration)
-      )
-    );
+    course.courseContent.forEach((ch) => ch.chapterContent.forEach((l) => (time += l.lectureDuration)));
     return humanizeDuration(time * 60 * 1000, { units: ["h", "m"] });
   };
 
   const calculateRating = (course) => {
-    if (course.courseRatings.length === 0) return 0;
-    const total = course.courseRatings.reduce((acc, r) => acc + r.rating, 0);
-    return Math.floor(total / course.courseRatings.length);
+    if (!course.courseRatings.length) return 0;
+    return Math.floor(course.courseRatings.reduce((a, r) => a + r.rating, 0) / course.courseRatings.length);
   };
 
-  const calculateNoOfLectures = (course) => {
-    return course.courseContent.reduce((total, chapter) => {
-      if (Array.isArray(chapter.chapterContent)) {
-        total += chapter.chapterContent.length;
-      }
-      return total;
-    }, 0);
-  };
+  const calculateNoOfLectures = (course) =>
+    course.courseContent.reduce((t, ch) => t + (ch.chapterContent?.length || 0), 0);
 
-  // ✅ Role-based redirect + data fetch
-  useEffect(() => {
-    if (!isLoaded) return;
-
-    if (!user) {
-      roleRedirectedRef.current = false;
-      return;
-    }
-
-    const role = user.publicMetadata?.role || "student";
-    fetchUserData();
-    fetchUserEnrolledCourses();
-
-    if (!roleRedirectedRef.current) {
-      if (role === "educator" || role === "admin") navigate("/educator");
-      else navigate("/");
-      roleRedirectedRef.current = true;
-    }
-  }, [user, isLoaded]);
-
-  useEffect(() => {
-    fetchAllCourses();
-  }, []);
+  useEffect(() => { fetchAllCourses(); }, []);
+  useEffect(() => { if (token) { fetchUserData(); fetchUserEnrolledCourses(); } }, [token]);
 
   const value = {
-    showLogin,
-    setShowLogin,
-    backendUrl,
-    currency,
-    navigate,
-    userData,
-    setUserData,
-    fetchUserData,
-    getToken,
-    allCourses,
-    fetchAllCourses,
-    enrolledCourses,
-    setEnrolledCourses,
-    fetchUserEnrolledCourses,
-    fetchCourseById,
-    calculateChapterTime,
-    calculateCourseDuration,
-    calculateRating,
-    calculateNoOfLectures,
-    isEducator,
-    setIsEducator,
+    showLogin, setShowLogin, backendUrl, currency, navigate,
+    userData, setUserData, fetchUserData, getToken, token,
+    allCourses, fetchAllCourses, enrolledCourses, setEnrolledCourses,
+    fetchUserEnrolledCourses, fetchCourseById,
+    calculateChapterTime, calculateCourseDuration, calculateRating,
+    calculateNoOfLectures, isEducator, setIsEducator,
+    login, register, logout,
   };
 
-  return (
-    <AppContext.Provider value={value}>{props.children}</AppContext.Provider>
-  );
+  return <AppContext.Provider value={value}>{props.children}</AppContext.Provider>;
 };

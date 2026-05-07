@@ -7,7 +7,7 @@ import { AppContext } from "../../context/AppContext";
 import { toast } from "react-toastify";
 import humanizeDuration from "humanize-duration";
 import YouTube from "react-youtube";
-import { useAuth } from "@clerk/clerk-react";
+
 import Loading from "../../components/student/Loading";
 
 const CourseDetails = () => {
@@ -30,7 +30,7 @@ const CourseDetails = () => {
     calculateRating,
     calculateNoOfLectures,
   } = useContext(AppContext);
-  const { getToken } = useAuth();
+  const { getToken } = useContext(AppContext);
 
   // ---------------- Fetch Course Data ----------------
   const fetchCourseData = async () => {

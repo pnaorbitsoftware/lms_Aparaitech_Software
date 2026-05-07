@@ -1,14 +1,11 @@
-import { useUser } from "@clerk/clerk-react";
+import { useContext } from "react";
 import { Navigate } from "react-router-dom";
+import { AppContext } from "../context/AppContext";
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
-  const { user } = useUser();
-  const role = user?.publicMetadata?.role;
-
-  if (!user) return <Navigate to="/sign-in" replace />;
-  if (!allowedRoles.includes(role))
-    return <Navigate to="/unauthorized" replace />;
-
+  const { userData } = useContext(AppContext);
+  if (!userData) return <Navigate to="/" replace />;
+  if (!allowedRoles.includes(userData.role)) return <Navigate to="/unauthorized" replace />;
   return children;
 };
 

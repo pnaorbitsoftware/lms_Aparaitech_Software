@@ -3,11 +3,11 @@ import axios from "axios";
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
 import { AppContext } from "../../context/AppContext";
-import { useAuth } from "@clerk/clerk-react";
+
 
 const AssignCourse = () => {
   const { backendUrl } = useContext(AppContext);
-  const { getToken } = useAuth(); // ✅ Clerk Auth
+  const { getToken } = useContext(AppContext);
   const [students, setStudents] = useState([]);
   const [courses, setCourses] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState("");
