@@ -1,99 +1,23 @@
 import express from "express";
 import {
-  addCourse,
-  updateCourse,
-  deleteCourse,
-  educatorDashboardData,
-  getEducatorCourses,
-  getEducatorCourseById,
-  getEnrolledStudentsData,
-  updateRoleToEducator,
-  removeStudentAccess,
-  getAllStudents,
-  assignCourse,
+  addCourse, updateCourse, deleteCourse, educatorDashboardData,
+  getEducatorCourses, getEducatorCourseById, getEnrolledStudentsData,
+  updateRoleToEducator, removeStudentAccess, getAllStudents, assignCourse,
 } from "../controllers/educatorController.js";
 import upload from "../configs/multer.js";
-import { requireAuth } from "@clerk/express"; // ✅ FIXED IMPORT
 
 const educatorRouter = express.Router();
 
-// -----------------------------
-// Add Educator Role
-// -----------------------------
-educatorRouter.get("/update-role", requireAuth(), updateRoleToEducator);
-
-// -----------------------------
-// Add Course
-// -----------------------------
-educatorRouter.post(
-  "/add-course",
-  requireAuth(),
-  upload.fields([
-    { name: "image", maxCount: 1 },
-    { name: "pdfs", maxCount: 10 },
-  ]),
-  addCourse
-);
-
-// -----------------------------
-// Get Educator Courses
-// -----------------------------
-educatorRouter.get("/courses", requireAuth(), getEducatorCourses);
-
-// -----------------------------
-// Get Single Educator Course
-// -----------------------------
-educatorRouter.get("/course/:id", requireAuth(), getEducatorCourseById);
-
-// -----------------------------
-// Update Course
-// -----------------------------
-educatorRouter.put(
-  "/course/:id",
-  requireAuth(),
-  upload.fields([
-    { name: "image", maxCount: 1 },
-    { name: "pdfs", maxCount: 10 },
-  ]),
-  updateCourse
-);
-
-// -----------------------------
-// Delete Course
-// -----------------------------
-educatorRouter.delete("/course/:id", requireAuth(), deleteCourse);
-
-// -----------------------------
-// Educator Dashboard Data
-// -----------------------------
-educatorRouter.get("/dashboard", requireAuth(), educatorDashboardData);
-
-// -----------------------------
-// Get Enrolled Students Data
-// -----------------------------
-educatorRouter.get(
-  "/enrolled-students",
-  requireAuth(),
-  getEnrolledStudentsData
-);
-
-// -----------------------------
-// Remove Student Access from Course
-// -----------------------------
-educatorRouter.delete(
-  "/remove-student/:courseId/:studentId",
-  requireAuth(),
-  removeStudentAccess
-);
-
-// -----------------------------
-// Get All Students
-// -----------------------------
-educatorRouter.get("/all-students", requireAuth(), getAllStudents);
-
-// -----------------------------
-// Assign Course to Student
-// -----------------------------
-educatorRouter.post("/assign-course", requireAuth(), assignCourse);
+educatorRouter.get("/update-role", updateRoleToEducator);
+educatorRouter.post("/add-course", upload.fields([{ name: "image", maxCount: 1 }, { name: "pdfs", maxCount: 10 }]), addCourse);
+educatorRouter.get("/courses", getEducatorCourses);
+educatorRouter.get("/course/:id", getEducatorCourseById);
+educatorRouter.put("/course/:id", upload.fields([{ name: "image", maxCount: 1 }, { name: "pdfs", maxCount: 10 }]), updateCourse);
+educatorRouter.delete("/course/:id", deleteCourse);
+educatorRouter.get("/dashboard", educatorDashboardData);
+educatorRouter.get("/enrolled-students", getEnrolledStudentsData);
+educatorRouter.delete("/remove-student/:courseId/:studentId", removeStudentAccess);
+educatorRouter.get("/all-students", getAllStudents);
+educatorRouter.post("/assign-course", assignCourse);
 
 export default educatorRouter;
